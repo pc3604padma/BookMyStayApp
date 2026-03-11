@@ -68,6 +68,8 @@ public class BookMyStayApp {
 
         System.out.println("Hotel Room Inventory Status\n");
 
+
+
         System.out.println("Single Room:");
         System.out.println("Beds: " + single.getBeds());
         System.out.println("Size: " + single.getSize() + " sqft");
