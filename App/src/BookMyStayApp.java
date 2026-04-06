@@ -1,80 +1,74 @@
 import java.util.*;
 
-// Reservation class
-class Reservation {
-    private String guestName;
-    private String roomType;
-
-    public Reservation(String guestName, String roomType) {
-        this.guestName = guestName;
-        this.roomType = roomType;
-    }
-
-    public String getGuestName() {
-        return guestName;
-    }
-
-    public String getRoomType() {
-        return roomType;
-    }
-}
-
-// BookingRequestQueue class
-class BookingRequestQueue {
-
-    private Queue<Reservation> requestQueue;
-
-    public BookingRequestQueue() {
-        requestQueue = new LinkedList<>();
-    }
-
-    // Add booking request
-    public void addRequest(Reservation reservation) {
-        requestQueue.offer(reservation);
-    }
-
-    // Get next request (FIFO)
-    public Reservation getNextRequest() {
-        return requestQueue.poll();
-    }
-
-    // Check if queue has requests
-    public boolean hasPendingRequests() {
-        return !requestQueue.isEmpty();
-    }
-}
-
-// Main class
 public class BookMyStayApp {
 
-    public static void main(String[] args) {
+    // Inventory: Maps Room Type to available count
+    private static Map<String, Integer> inventory = new HashMap<>();
 
-        // Display header
-        System.out.println("Booking Request Queue");
+    // Allocation Tracking: Maps Room Type to a Set of unique assigned Room IDs
+    private static Map<String, Set<String>> allocatedRooms = new HashMap<>();
 
-        // Initialize queue
-        BookingRequestQueue bookingQueue = new BookingRequestQueue();
+    // FIFO Queue for Booking Requests
+    private static Queue<BookingRequest> requestQueue = new LinkedList<>();
 
-        // Create reservations
-        Reservation r1 = new Reservation("Abhi", "Single");
-        Reservation r2 = new Reservation("Subha", "Double");
-        Reservation r3 = new Reservation("Vanmathi", "Suite");
+    static class BookingRequest {
+        String guestName;
+        String roomType;
 
-        // Add to queue
-        bookingQueue.addRequest(r1);
-        bookingQueue.addRequest(r2);
-        bookingQueue.addRequest(r3);
-
-        // Process queue in FIFO order
-        while (bookingQueue.hasPendingRequests()) {
-            Reservation r = bookingQueue.getNextRequest();
-
-            System.out.println(
-                    "Processing booking for Guest: " +
-                            r.getGuestName() +
-                            ", Room Type: " +
-                            r.getRoomType()
-            );
+        public BookingRequest(String guestName, String roomType) {
+            this.guestName = guestName;
+            this.roomType = roomType;
         }
+    }
+
+    public static void main(String[] args) {
+        // 1. Initialize Inventory
+        inventory.put("Deluxe", 2);
+        inventory.put("Standard", 1);
+
+        allocatedRooms.put("Deluxe", new HashSet<>());
+        allocatedRooms.put("Standard", new HashSet<>());
+
+        // 2. Add Requests to Queue (FIFO)
+        requestQueue.add(new BookingRequest("Alice", "Deluxe"));
+        requestQueue.add(new BookingRequest("Bob", "Deluxe"));
+        requestQueue.add(new BookingRequest("Charlie", "Deluxe")); // Should fail (no inventory)
+        requestQueue.add(new BookingRequest("David", "Standard"));
+
+        System.out.println("--- Processing Room Allocations ---");
+        processAllocations();
+    }
+
+    public static void processAllocations() {
+        while (!requestQueue.isEmpty()) {
+            BookingRequest request = requestQueue.poll();
+            String type = request.roomType;
+
+            // Check inventory consistency
+            if (inventory.containsKey(type) && inventory.get(type) > 0) {
+                // Generate a Unique Room ID (e.g., DELUXE-101)
+                String roomID = type.toUpperCase() + "-" + (100 + allocatedRooms.get(type).size() + 1);
+
+                // Uniqueness Enforcement using Set
+                if (!allocatedRooms.get(type).contains(roomID)) {
+                    allocatedRooms.get(type).add(roomID);
+
+                    // Atomic-like update: Decrement inventory immediately
+                    inventory.put(type, inventory.get(type) - 1);
+
+                    System.out.println("SUCCESS: " + request.guestName + " assigned to " + roomID);
+                }
+            } else {
+                System.out.println("FAILED: No " + type + " rooms available for " + request.guestName);
+            }
+        }
+
+        displayFinalState();
+    }
+
+    private static void displayFinalState() {
+        System.out.println("\n--- Final System State ---");
+        System.out.println("Remaining Inventory: " + inventory);
+        System.out.println("Allocated Rooms: " + allocatedRooms);
     }
 }
